@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>HA Automation Assistant</title>
+  <style>
+    body { font-family: monospace; max-width: 700px; margin: 40px auto; padding: 0 16px; }
+    #log { border: 1px solid #ccc; height: 400px; overflow-y: auto; padding: 8px; margin-bottom: 8px; }
+    #input { width: 100%; box-sizing: border-box; padding: 8px; font-family: monospace; }
+    .user { color: #0a0; } .assistant { color: #00a; } .error { color: #a00; }
+    #preview { display: none; border: 1px solid #aaa; padding: 8px; margin-top: 8px; }
+    pre { background: #f4f4f4; padding: 8px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h2>HA Automation Assistant</h2>
+  <div id="log"></div>
+  <input id="input" type="text" placeholder="Describe an automation..." />
+  <div id="preview">
+    <strong>Proposed automation:</strong>
+    <pre id="yaml"></pre>
+    <button onclick="confirm_()">Confirm</button>
+    <button onclick="cancel()">Cancel</button>
+  </div>
+
+  <script>
+    // Phase 4 placeholder — wire to POST /api/chat SSE in backend Phase 2
+    const log = document.getElementById('log');
+    const input = document.getElementById('input');
+    let sessionId = null;
+    let pendingId = null;
+
+    function append(text, cls) {
+      const div = document.createElement('div');
+      div.className = cls;
+      div.textContent = text;
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    input.addEventListener('keydown', async (e) => {
+      if (e.key !== 'Enter' || !input.value.trim()) return;
+      const msg = input.value.trim();
+      input.value = '';
+      append('You: ' + msg, 'user');
+      await send(msg, false);
+    });
+
+    async function send(message, confirmed) {
+      const body = { message, confirmed };
+      if (sessionId) body.session_id = sessionId;
+
+      const resp = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!resp.ok) { append('Error: ' + resp.status, 'error'); return; }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantMsg = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        for (const line of chunk.split('\n')) {
+          if (!line.startsWith('data: ')) continue;
+          const data = JSON.parse(line.slice(6));
+          if (data.session_id) sessionId = data.session_id;
+          if (data.text) { assistantMsg += data.text; }
+          if (data.automation) {
+            pendingId = data.automation.id;
+            document.getElementById('yaml').textContent = data.automation.yaml;
+            document.getElementById('preview').style.display = 'block';
+          }
+        }
+      }
+      if (assistantMsg) append('Assistant: ' + assistantMsg, 'assistant');
+    }
+
+    async function confirm_() {
+      document.getElementById('preview').style.display = 'none';
+      await send('', true);
+    }
+
+    function cancel() {
+      document.getElementById('preview').style.display = 'none';
+      pendingId = null;
+    }
+  </script>
+</body>
+</html>
