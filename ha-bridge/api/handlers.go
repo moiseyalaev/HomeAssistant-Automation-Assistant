@@ -31,7 +31,26 @@ func (h *Handler) Entities(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	writeJSON(w, http.StatusOK, h.cache.All())
+
+	entities := h.cache.All()
+
+	// ?domains=light,switch,climate — filter to specific domains if provided
+	if raw := r.URL.Query().Get("domains"); raw != "" {
+		allowed := make(map[string]bool)
+		for _, d := range strings.Split(raw, ",") {
+			allowed[strings.TrimSpace(d)] = true
+		}
+		filtered := entities[:0]
+		for _, e := range entities {
+			domain := strings.SplitN(e.EntityID, ".", 2)[0]
+			if allowed[domain] {
+				filtered = append(filtered, e)
+			}
+		}
+		entities = filtered
+	}
+
+	writeJSON(w, http.StatusOK, entities)
 }
 
 func (h *Handler) EntityByID(w http.ResponseWriter, r *http.Request) {
