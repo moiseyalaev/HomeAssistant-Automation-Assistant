@@ -24,9 +24,18 @@ async def get_entity(entity_id: str) -> dict:
 
 
 async def write_automation(automation_id: str, yaml_content: str) -> None:
+    import yaml  # pyyaml — already in requirements.txt
+
+    config = yaml.safe_load(yaml_content)
+    if not isinstance(config, dict):
+        raise ValueError("Automation YAML must be a mapping")
+
+    # Strip 'id' from the config body — we pass it separately as the URL key
+    config.pop("id", None)
+
     async with httpx.AsyncClient() as client:
         r = await client.post(
             f"{settings.bridge_url}/automations",
-            json={"id": automation_id, "yaml": yaml_content},
+            json={"id": automation_id, "config": config},
         )
         r.raise_for_status()

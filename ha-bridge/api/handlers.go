@@ -72,8 +72,8 @@ func (h *Handler) EntityByID(w http.ResponseWriter, r *http.Request) {
 }
 
 type writeAutomationRequest struct {
-	ID   string `json:"id"`
-	YAML string `json:"yaml"`
+	ID     string                 `json:"id"`
+	Config map[string]interface{} `json:"config"`
 }
 
 func (h *Handler) WriteAutomation(w http.ResponseWriter, r *http.Request) {
@@ -86,7 +86,11 @@ func (h *Handler) WriteAutomation(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
 	}
-	if err := h.client.WriteAutomation(req.ID, req.YAML); err != nil {
+	if req.ID == "" || len(req.Config) == 0 {
+		http.Error(w, "id and config are required", http.StatusBadRequest)
+		return
+	}
+	if err := h.client.WriteAutomation(req.ID, req.Config); err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
