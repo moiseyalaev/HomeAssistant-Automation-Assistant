@@ -1,11 +1,17 @@
 """HTTP client for the Go HA bridge."""
+from __future__ import annotations
+
+from typing import Optional
+
 import httpx
+
 from .config import settings
 
 
-async def get_entities() -> list[dict]:
+async def get_entities(domains: Optional[str] = None) -> list[dict]:
+    params = {"domains": domains} if domains else {}
     async with httpx.AsyncClient() as client:
-        r = await client.get(f"{settings.bridge_url}/entities")
+        r = await client.get(f"{settings.bridge_url}/entities", params=params)
         r.raise_for_status()
         return r.json()
 

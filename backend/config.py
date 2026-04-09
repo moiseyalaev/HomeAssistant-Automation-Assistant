@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str
     bridge_url: str = "http://localhost:8080"
 
-    model_config = {"env_file": ".env"}
+    model_config = {"env_file": ".env", "extra": "ignore"}
 
 
 settings = Settings()
