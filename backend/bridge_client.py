@@ -8,6 +8,17 @@ import httpx
 from .config import settings
 
 
+async def get_ha_version() -> str:
+    """Return the running HA version string, e.g. '2024.4.1'. Returns 'unknown' on failure."""
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{settings.bridge_url}/version", timeout=5)
+            r.raise_for_status()
+            return r.json().get("version", "unknown")
+    except Exception:
+        return "unknown"
+
+
 async def get_entities(domains: Optional[str] = None) -> list[dict]:
     params = {"domains": domains} if domains else {}
     async with httpx.AsyncClient() as client:

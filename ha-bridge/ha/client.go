@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -32,7 +33,7 @@ func NewClient(baseURL, token string, cache *Cache) *Client {
 // TODO: replace polling with WS push once WS layer is implemented.
 func (c *Client) Run() {
 	c.refresh()
-	ticker := time.NewTicker(45 * time.Second)
+	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	for range ticker.C {
 		c.refresh()
@@ -46,7 +47,6 @@ func (c *Client) refresh() {
 		return
 	}
 	c.cache.Set(entities)
-	log.Printf("ha cache refreshed: %d entities", len(entities))
 }
 
 func (c *Client) fetchStates() ([]Entity, error) {
@@ -74,17 +74,50 @@ func (c *Client) fetchStates() ([]Entity, error) {
 	return entities, nil
 }
 
+// FetchVersion returns the running Home Assistant version string (e.g. "2024.4.1").
+// It calls GET /api/ which returns {"message": "...", "version": "..."}.
+func (c *Client) FetchVersion() (string, error) {
+	req, err := http.NewRequest("GET", c.baseURL+"/api/", nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("HA returned %d on /api/", resp.StatusCode)
+	}
+
+	var result struct {
+		Version string `json:"version"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", err
+	}
+	return result.Version, nil
+}
+
 // WriteAutomation writes an automation to automations.yaml via HA's config REST API
 // and triggers a reload. The id is used as the automation's YAML key and becomes
 // the entity_id suffix (e.g. id "my-auto" → automation.my_auto).
 func (c *Client) WriteAutomation(id string, config map[string]interface{}) error {
+	alias, _ := config["alias"].(string)
+	log.Printf("write automation: id=%q alias=%q", id, alias)
+
 	body, err := json.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("failed to encode automation config: %w", err)
 	}
+	log.Printf("write automation: payload=%s", body)
 
-	// POST /api/config/automation/config/{id} — creates or updates by ID in automations.yaml
-	req, err := http.NewRequest("POST", c.baseURL+"/api/config/automation/config/"+id, bytes.NewReader(body))
+	url := c.baseURL + "/api/config/automation/config/" + id
+	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
@@ -93,28 +126,42 @@ func (c *Client) WriteAutomation(id string, config map[string]interface{}) error
 
 	resp, err := c.http.Do(req)
 	if err != nil {
+		log.Printf("write automation: request failed: %v", err)
 		return err
 	}
 	defer resp.Body.Close()
 
+	respBody, _ := io.ReadAll(resp.Body)
+	log.Printf("write automation: HA responded %d — %s", resp.StatusCode, respBody)
+
 	if resp.StatusCode >= 300 {
-		return fmt.Errorf("HA returned %d when writing automation %s", resp.StatusCode, id)
+		return fmt.Errorf("HA returned %d when writing automation %q: %s", resp.StatusCode, id, respBody)
 	}
 
 	return c.reloadAutomations()
 }
 
 func (c *Client) reloadAutomations() error {
+	log.Printf("reloading automations")
 	req, err := http.NewRequest("POST", c.baseURL+"/api/services/automation/reload", nil)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.http.Do(req)
 	if err != nil {
+		log.Printf("reload automations: request failed: %v", err)
 		return err
 	}
 	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= 300 {
+		log.Printf("reload automations: HA returned %d — %s", resp.StatusCode, respBody)
+		return fmt.Errorf("HA reload returned %d: %s", resp.StatusCode, respBody)
+	}
+	log.Printf("reload automations: done (%d)", resp.StatusCode)
 	return nil
 }

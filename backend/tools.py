@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 
 from . import bridge_client as bridge
+
+log = logging.getLogger(__name__)
 
 TOOLS = [
     {
@@ -89,6 +92,7 @@ async def dispatch(block, session: dict, confirmed: bool) -> str:
             "description": inp["description"],
             "yaml": inp["yaml"],
         }
+        log.info("propose_automation: stored id=%s name=%r", automation_id, inp["name"])
         return (
             f"Automation proposed (id={automation_id}). "
             "The user now sees a preview with Confirm/Cancel. "
@@ -96,18 +100,28 @@ async def dispatch(block, session: dict, confirmed: bool) -> str:
         )
 
     if name == "create_automation":
+        log.info("create_automation: called — confirmed=%s input=%s", confirmed, inp)
         if not confirmed:
+            log.warning("create_automation: rejected — not confirmed")
             return "Cannot write automation: user has not confirmed yet."
         pending = session.get("pending_automation")
         if not pending:
+            log.warning("create_automation: no pending automation in session")
             return "No pending automation found in this session."
         if pending["id"] != inp.get("automation_id"):
+            log.warning(
+                "create_automation: ID mismatch — pending=%s claude_sent=%s",
+                pending["id"], inp.get("automation_id"),
+            )
             return f"Automation ID mismatch. Expected {pending['id']}."
+        log.info("create_automation: writing id=%s name=%r", pending["id"], pending["name"])
         try:
             await bridge.write_automation(pending["id"], pending["yaml"])
             session["pending_automation"] = None
+            log.info("create_automation: success")
             return f"Automation '{pending['name']}' successfully written to Home Assistant."
         except Exception as e:
+            log.error("create_automation: bridge error: %s", e)
             return f"Error writing automation to HA: {e}"
 
     return f"Unknown tool: {name}"

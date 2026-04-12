@@ -24,7 +24,7 @@ type Cache struct {
 func NewCache() *Cache {
 	return &Cache{
 		entities: make(map[string]Entity),
-		ttl:      45 * time.Second,
+		ttl:      10 * time.Second,
 	}
 }
 

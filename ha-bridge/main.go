@@ -25,6 +25,7 @@ func main() {
 	h := api.NewHandler(cache, client)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", h.Health)
+	mux.HandleFunc("/version", h.Version)
 	mux.HandleFunc("/entities", h.Entities)
 	mux.HandleFunc("/entities/", h.EntityByID)
 	mux.HandleFunc("/automations", h.WriteAutomation)

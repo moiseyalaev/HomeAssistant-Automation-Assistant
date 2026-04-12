@@ -1,0 +1,121 @@
+/* ── Full-width (no panel) layout ── */
+.fullChat {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Split container ── */
+.splitContainer {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  /* flex-direction set inline: row (horizontal) or column (vertical) */
+}
+
+/* Chat half of split */
+.splitChat {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Automation panel half */
+.splitPanel {
+  flex: 1;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ── Draggable divider ── */
+.divider {
+  position: relative;
+  background: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 10;
+  transition: background var(--transition);
+}
+
+.divider:hover,
+.divider:active {
+  background: var(--ha-blue);
+}
+
+/* Vertical bar (horizontal split = left|right) */
+.dividerH {
+  width: 5px;
+  cursor: col-resize;
+}
+
+/* Horizontal bar (vertical split = top/bottom) */
+.dividerV {
+  height: 5px;
+  cursor: row-resize;
+}
+
+/* Direction toggle button sits on top of the divider */
+.dirToggle {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  transition: all var(--transition);
+  padding: 0;
+  line-height: 1;
+}
+
+.dirToggle:hover {
+  background: var(--ha-blue);
+  color: white;
+  border-color: var(--ha-blue);
+}
+
+/* ── Shared chat pane internals ── */
+.chatPane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.chatScroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+}
+
+.error {
+  align-self: flex-start;
+  background: rgba(244, 67, 54, 0.1);
+  border: 1px solid rgba(244, 67, 54, 0.25);
+  color: var(--ha-red);
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  animation: fadeIn 0.3s ease;
+}

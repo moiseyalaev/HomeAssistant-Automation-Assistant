@@ -1,0 +1,114 @@
+:root {
+  /* Home Assistant inspired palette */
+  --ha-blue: #18bcf2;
+  --ha-blue-dark: #0d9fd4;
+  --ha-cyan: #44dbda;
+  --ha-yellow: #ffd24d;
+  --ha-orange: #ff9800;
+  --ha-green: #4caf50;
+  --ha-red: #f44336;
+
+  /* UI colors - dark theme (HA default feel) */
+  --bg-primary: #111318;
+  --bg-secondary: #1c1e24;
+  --bg-card: #1e2128;
+  --bg-hover: #262a33;
+  --bg-input: #262a33;
+  --text-primary: #e1e3e8;
+  --text-secondary: #8b8fa3;
+  --text-muted: #5c6070;
+  --border: #2a2e38;
+  --border-focus: #18bcf2;
+  --accent: #18bcf2;
+  --accent-hover: #0d9fd4;
+  --accent-glow: rgba(24, 188, 242, 0.15);
+  --user-bubble: #2a3a4a;
+  --assistant-bubble: #1e2128;
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.4);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 16px;
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+#root {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes orb-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.05); }
+}
+
+@keyframes ripple {
+  0% { box-shadow: 0 0 0 0 rgba(24, 188, 242, 0.3); }
+  100% { box-shadow: 0 0 0 12px rgba(24, 188, 242, 0); }
+}
