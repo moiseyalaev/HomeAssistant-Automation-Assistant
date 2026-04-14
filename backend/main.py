@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from .bridge_client import close_client, get_entities, get_ha_version
+from .bridge_client import close_client, get_entities, get_ha_version, get_registry_status
 from .claude_client import CONTEXT_DOMAINS, stream_chat
 from .context_builder import build_system_prompt
 from .models import ChatRequest, ValidateRequest
@@ -57,6 +57,13 @@ async def health():
     return JSONResponse({"status": "ok", "ha_version": app.state.ha_version})
 
 
+@app.get("/api/status")
+async def status():
+    """Proxy bridge registry availability for the frontend."""
+    registry_available = await get_registry_status()
+    return JSONResponse({"registry_available": registry_available})
+
+
 @app.post("/api/chat")
 async def chat(req: ChatRequest):
     session_id, session = get_or_create(req.session_id)
@@ -74,11 +81,12 @@ async def chat(req: ChatRequest):
             {"role": "user", "content": "Yes, please create the automation."}
         )
 
-    entities = await get_entities(domains=CONTEXT_DOMAINS)
+    entities, registry_available = await get_entities(domains=CONTEXT_DOMAINS)
     system_prompt = build_system_prompt(
         entities,
         ha_version=app.state.ha_version,
         pending_automation=session.get("pending_automation"),
+        registry_available=registry_available,
     )
 
     async def event_stream():
@@ -154,7 +162,7 @@ async def validate_yaml(req: ValidateRequest):
         return refs
 
     try:
-        all_entities = await get_entities(domains=CONTEXT_DOMAINS)
+        all_entities, _ = await get_entities(domains=CONTEXT_DOMAINS)
         known_ids = {e["entity_id"] for e in all_entities}
         candidates = collect_entity_refs(config)
         for ref in sorted(set(candidates)):
