@@ -6,6 +6,7 @@ import EmptyState from './components/EmptyState'
 import ChatMessage from './components/ChatMessage'
 import LoadingIndicator from './components/LoadingIndicator'
 import DeployBanner from './components/DeployBanner'
+import StatusBanner from './components/StatusBanner'
 import AutomationPanel from './components/AutomationPanel'
 import ChatInput from './components/ChatInput'
 import styles from './App.module.css'
@@ -19,6 +20,20 @@ export default function App() {
   const chat = useChat()
   const scrollRef = useRef(null)
   const prevMessageCount = useRef(0)
+
+  // Registry availability — checked once on mount
+  const [registryAvailable, setRegistryAvailable] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/status')
+      .then(r => r.json())
+      .then(data => {
+        if (data.registry_available === false) setRegistryAvailable(false)
+      })
+      .catch(() => {
+        // Backend unreachable — don't show the banner, that's a different problem
+      })
+  }, [])
 
   // Split-pane state
   const [splitDir, setSplitDir] = useState('horizontal')
@@ -125,6 +140,8 @@ export default function App() {
         onToggleVoice={() => voice.setVoiceEnabled(v => !v)}
         hasRecognition={voice.hasRecognition}
       />
+
+      {registryAvailable === false && <StatusBanner />}
 
       {showPanel ? (
         <div

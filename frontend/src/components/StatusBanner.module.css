@@ -1,0 +1,47 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(234, 179, 8, 0.08);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  border-radius: 0;
+  animation: fadeIn 0.3s ease;
+  flex-shrink: 0;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  color: rgb(202, 138, 4);
+}
+
+.text {
+  font-size: 12.5px;
+  color: rgb(202, 138, 4);
+  font-weight: 500;
+  flex: 1;
+}
+
+.close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(202, 138, 4, 0.7);
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+
+.close:hover {
+  color: rgb(202, 138, 4);
+  background: rgba(234, 179, 8, 0.12);
+}
