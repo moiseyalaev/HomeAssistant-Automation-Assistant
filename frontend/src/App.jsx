@@ -26,37 +26,33 @@ export default function App() {
   const splitContainerRef = useRef(null)
   const dragging = useRef(false)
 
-  const handleTranscript = useCallback((transcript) => {
-    chat.send(transcript)
-  }, [chat.send])
+  const voice = useVoice({ onTranscript: chat.send })
 
-  const voice = useVoice({ onTranscript: handleTranscript })
-
-  // Auto-scroll chat on new messages
+  // Scroll to bottom when a new message is added (non-streaming) or continuously
+  // during streaming via the interval. A single effect avoids redundant scrollTo
+  // calls that occurred when both fired simultaneously during streaming.
   useEffect(() => {
+    if (chat.isStreaming) {
+      const id = setInterval(() => {
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
+      }, 80)
+      return () => clearInterval(id)
+    }
+    // Not streaming — scroll once when message count grows (e.g. user message added)
     if (chat.messages.length > prevMessageCount.current) {
       scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
     }
     prevMessageCount.current = chat.messages.length
-  }, [chat.messages])
+  }, [chat.isStreaming, chat.messages])
 
-  // Continuous scroll during streaming
+  // Speak the last assistant message once streaming completes
   useEffect(() => {
-    if (!chat.isStreaming) return
-    const id = setInterval(() => {
-      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-    }, 80)
-    return () => clearInterval(id)
-  }, [chat.isStreaming])
-
-  // TTS for completed assistant messages
-  useEffect(() => {
-    if (!voice.voiceEnabled) return
+    if (!voice.voiceEnabled || chat.isStreaming) return
     const last = chat.messages[chat.messages.length - 1]
-    if (last?.role === 'assistant' && !last.isStreaming && last.content) {
+    if (last?.role === 'assistant' && last.content) {
       voice.speak(last.content)
     }
-  }, [chat.messages, voice.voiceEnabled])
+  }, [chat.isStreaming, voice.voiceEnabled])
 
   // Draggable divider — pointer events on document for smooth tracking
   const startDrag = useCallback((e) => {

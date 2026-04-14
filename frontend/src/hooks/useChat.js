@@ -100,13 +100,6 @@ export default function useChat() {
         }
       }
 
-      setMessages(prev => {
-        const updated = [...prev]
-        if (updated.length > 0) {
-          updated[updated.length - 1] = { ...updated[updated.length - 1], isStreaming: false }
-        }
-        return updated
-      })
     } catch (err) {
       if (err.name !== 'AbortError') {
         setError(err.message)

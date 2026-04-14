@@ -28,6 +28,18 @@ func NewClient(baseURL, token string, cache *Cache) *Client {
 	}
 }
 
+func (c *Client) newRequest(method, path string, body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequest(method, c.baseURL+path, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	return req, nil
+}
+
 // Run starts the background loop: fetch entities on start, then refresh on TTL.
 // Also starts the WebSocket connection for registry data.
 // TODO: replace polling with WS push once WS layer is implemented.
@@ -50,12 +62,10 @@ func (c *Client) refresh() {
 }
 
 func (c *Client) fetchStates() ([]Entity, error) {
-	req, err := http.NewRequest("GET", c.baseURL+"/api/states", nil)
+	req, err := c.newRequest("GET", "/api/states", nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.token)
-	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.http.Do(req)
 	if err != nil {
@@ -77,12 +87,10 @@ func (c *Client) fetchStates() ([]Entity, error) {
 // FetchVersion returns the running Home Assistant version string (e.g. "2024.4.1").
 // It calls GET /api/ which returns {"message": "...", "version": "..."}.
 func (c *Client) FetchVersion() (string, error) {
-	req, err := http.NewRequest("GET", c.baseURL+"/api/", nil)
+	req, err := c.newRequest("GET", "/api/", nil)
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.token)
-	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.http.Do(req)
 	if err != nil {
@@ -116,13 +124,10 @@ func (c *Client) WriteAutomation(id string, config map[string]interface{}) error
 	}
 	log.Printf("write automation: payload=%s", body)
 
-	url := c.baseURL + "/api/config/automation/config/" + id
-	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
+	req, err := c.newRequest("POST", "/api/config/automation/config/"+id, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.token)
-	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.http.Do(req)
 	if err != nil {
@@ -143,12 +148,10 @@ func (c *Client) WriteAutomation(id string, config map[string]interface{}) error
 
 func (c *Client) reloadAutomations() error {
 	log.Printf("reloading automations")
-	req, err := http.NewRequest("POST", c.baseURL+"/api/services/automation/reload", nil)
+	req, err := c.newRequest("POST", "/api/services/automation/reload", nil)
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.token)
-	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.http.Do(req)
 	if err != nil {

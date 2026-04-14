@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from .bridge_client import get_entities, get_ha_version
+from .bridge_client import close_client, get_entities, get_ha_version
 from .claude_client import CONTEXT_DOMAINS, stream_chat
 from .context_builder import build_system_prompt
 from .models import ChatRequest, ValidateRequest
@@ -28,6 +28,7 @@ _HA_DOMAINS = {
     "select", "sensor", "siren", "sun", "switch", "text", "timer", "todo",
     "vacuum", "valve", "weather", "zone",
 }
+_ENTITY_KEYS = {"entity_id", "entity_ids", "entities"}
 
 
 @asynccontextmanager
@@ -36,6 +37,7 @@ async def lifespan(app: FastAPI):
     app.state.ha_version = version
     log.info("Home Assistant version detected: %s", version)
     yield
+    await close_client()
 
 
 app = FastAPI(title="HA Automation Assistant", lifespan=lifespan)
@@ -135,10 +137,6 @@ async def validate_yaml(req: ValidateRequest):
     # 4. Entity existence check against the live bridge cache.
     # Walk the parsed YAML and only collect values under known entity-reference keys,
     # which avoids false positives from service names like "light.turn_on".
-    _ENTITY_KEYS = {
-        "entity_id", "entity_ids", "entities",
-    }
-
     def collect_entity_refs(node) -> list[str]:
         refs = []
         if isinstance(node, dict):
@@ -156,7 +154,7 @@ async def validate_yaml(req: ValidateRequest):
         return refs
 
     try:
-        all_entities = await get_entities()
+        all_entities = await get_entities(domains=CONTEXT_DOMAINS)
         known_ids = {e["entity_id"] for e in all_entities}
         candidates = collect_entity_refs(config)
         for ref in sorted(set(candidates)):

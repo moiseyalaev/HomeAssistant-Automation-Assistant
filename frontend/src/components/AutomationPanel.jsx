@@ -4,7 +4,6 @@ import styles from './AutomationPanel.module.css'
 
 export default function AutomationPanel({ automation, onConfirm, onDismiss, onYamlChange, onFixWithAI, isConfirming }) {
   const [yaml, setYaml] = useState(automation.yaml)
-  const [isDirty, setIsDirty] = useState(false)
   const [copied, setCopied] = useState(false)
   const [validation, setValidation] = useState(null)   // null | { valid, errors, warnings, missing_entities }
   const [isValidating, setIsValidating] = useState(false)
@@ -14,7 +13,6 @@ export default function AutomationPanel({ automation, onConfirm, onDismiss, onYa
   // When the LLM pushes a new automation, reset to it
   useEffect(() => {
     setYaml(automation.yaml)
-    setIsDirty(false)
     setValidation(null)
   }, [automation.id, automation.yaml])
 
@@ -29,7 +27,6 @@ export default function AutomationPanel({ automation, onConfirm, onDismiss, onYa
   const handleChange = (e) => {
     const val = e.target.value
     setYaml(val)
-    setIsDirty(val !== automation.yaml)
     setValidation(null)
     onYamlChange(val)
   }
@@ -69,13 +66,14 @@ export default function AutomationPanel({ automation, onConfirm, onDismiss, onYa
     const end = el.selectionEnd
     const newVal = yaml.slice(0, start) + '  ' + yaml.slice(end)
     setYaml(newVal)
-    setIsDirty(true)
     onYamlChange(newVal)
     // Restore cursor position after React re-render
     requestAnimationFrame(() => {
       el.selectionStart = el.selectionEnd = start + 2
     })
   }
+
+  const isDirty = yaml !== automation.yaml
 
   const validationIcon = () => {
     if (!validation) return null
