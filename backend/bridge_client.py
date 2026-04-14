@@ -37,11 +37,25 @@ async def get_ha_version() -> str:
         return "unknown"
 
 
-async def get_entities(domains: Optional[str] = None) -> list[dict]:
+async def get_entities(domains: Optional[str] = None) -> tuple[list[dict], bool]:
     params = {"domains": domains} if domains else {}
     r = await get_client().get(f"{settings.bridge_url}/entities", params=params)
     r.raise_for_status()
-    return r.json()
+    data = r.json()
+    if isinstance(data, list):
+        # backwards compat with old bridge — registry unavailable
+        return data, False
+    return data["entities"], data.get("registry_available", False)
+
+
+async def get_registry_status() -> bool:
+    """Returns True if the bridge's registry WebSocket is connected."""
+    try:
+        r = await get_client().get(f"{settings.bridge_url}/health", timeout=5)
+        r.raise_for_status()
+        return r.json().get("registry_status") == "ok"
+    except Exception:
+        return False
 
 
 async def get_entity(entity_id: str) -> dict:
