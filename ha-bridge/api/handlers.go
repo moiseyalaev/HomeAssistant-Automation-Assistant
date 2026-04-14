@@ -9,12 +9,13 @@ import (
 )
 
 type Handler struct {
-	cache  *ha.Cache
-	client *ha.Client
+	cache         *ha.Cache
+	registryCache *ha.RegistryCache
+	client        *ha.Client
 }
 
-func NewHandler(cache *ha.Cache, client *ha.Client) *Handler {
-	return &Handler{cache: cache, client: client}
+func NewHandler(cache *ha.Cache, registryCache *ha.RegistryCache, client *ha.Client) *Handler {
+	return &Handler{cache: cache, registryCache: registryCache, client: client}
 }
 
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
@@ -23,7 +24,14 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	if stale {
 		status = "stale"
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"status": status})
+	registryStatus := "unavailable"
+	if h.registryCache.IsReady() {
+		registryStatus = "ok"
+	}
+	writeJSON(w, http.StatusOK, map[string]string{
+		"status":          status,
+		"registry_status": registryStatus,
+	})
 }
 
 func (h *Handler) Entities(w http.ResponseWriter, r *http.Request) {
@@ -50,7 +58,22 @@ func (h *Handler) Entities(w http.ResponseWriter, r *http.Request) {
 		entities = filtered
 	}
 
-	writeJSON(w, http.StatusOK, entities)
+	enriched := make([]ha.EnrichedEntity, 0, len(entities))
+	for _, e := range entities {
+		areaName, deviceName, manufacturer, model := h.registryCache.Enrich(e.EntityID)
+		enriched = append(enriched, ha.EnrichedEntity{
+			Entity:       e,
+			AreaName:     areaName,
+			DeviceName:   deviceName,
+			Manufacturer: manufacturer,
+			Model:        model,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"registry_available": h.registryCache.IsReady(),
+		"entities":           enriched,
+	})
 }
 
 func (h *Handler) EntityByID(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +91,15 @@ func (h *Handler) EntityByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
-	writeJSON(w, http.StatusOK, entity)
+	areaName, deviceName, manufacturer, model := h.registryCache.Enrich(entity.EntityID)
+	enriched := ha.EnrichedEntity{
+		Entity:       entity,
+		AreaName:     areaName,
+		DeviceName:   deviceName,
+		Manufacturer: manufacturer,
+		Model:        model,
+	}
+	writeJSON(w, http.StatusOK, enriched)
 }
 
 type writeAutomationRequest struct {

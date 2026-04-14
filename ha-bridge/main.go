@@ -17,12 +17,16 @@ func main() {
 		port = "8080"
 	}
 
+	registryCache := ha.NewRegistryCache()
+	registryClient := ha.NewRegistryClient(haURL, haToken, registryCache)
+	go registryClient.Run()
+
 	cache := ha.NewCache()
 	client := ha.NewClient(haURL, haToken, cache)
 
 	go client.Run() // persistent WS connection + cache refresh
 
-	h := api.NewHandler(cache, client)
+	h := api.NewHandler(cache, registryCache, client)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", h.Health)
 	mux.HandleFunc("/version", h.Version)
